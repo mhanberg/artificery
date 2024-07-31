@@ -23,10 +23,10 @@ defmodule Artificery do
   """
   alias __MODULE__.Command
 
-  @type argv :: [String.t]
+  @type argv :: [String.t()]
   @type options :: %{atom => term}
 
-  @callback pre_dispatch(Command.t, argv, options) :: {:ok, options} | no_return
+  @callback pre_dispatch(Command.t(), argv, options) :: {:ok, options} | no_return
 
   @doc false
   defmacro __using__(opts) when is_list(opts) do
@@ -48,15 +48,24 @@ defmodule Artificery do
       Module.put_attribute(__MODULE__, :global_options, %{})
 
       import unquote(__MODULE__),
-        only: [command: 2, command: 3, command: 4,
-               # define options for reuse
-               defoption: 3, defoption: 4,
-               # option/1 and /2 are used to import opts defined via defoption
-               option: 1, option: 2,
-               # option/3 and /4 are inline option definitions
-               option: 3, option: 4,
-               # arguments are effectively positional options
-               argument: 2, argument: 3, argument: 4]
+        only: [
+          command: 2,
+          command: 3,
+          command: 4,
+          # define options for reuse
+          defoption: 3,
+          defoption: 4,
+          # option/1 and /2 are used to import opts defined via defoption
+          option: 1,
+          option: 2,
+          # option/3 and /4 are inline option definitions
+          option: 3,
+          option: 4,
+          # arguments are effectively positional options
+          argument: 2,
+          argument: 3,
+          argument: 4
+        ]
 
       var!(current_command, unquote(__MODULE__)) = nil
 
@@ -67,7 +76,6 @@ defmodule Artificery do
       defoverridable pre_dispatch: 3
     end
   end
-
 
   @doc """
   Defines a new command with the given name and either help text or flags.
@@ -84,6 +92,7 @@ defmodule Artificery do
       command(unquote(name), [], unquote(help), do: nil)
     end
   end
+
   defmacro command(name, flags) when is_atom(name) and is_list(flags) do
     quote location: :keep do
       command(unquote(name), unquote(flags), nil, do: nil)
@@ -114,11 +123,13 @@ defmodule Artificery do
       command(unquote(name), [], unquote(help), do: unquote(block))
     end
   end
+
   defmacro command(name, flags, do: block) when is_atom(name) and is_list(flags) do
     quote location: :keep do
       command(unquote(name), unquote(flags), nil, do: unquote(block))
     end
   end
+
   defmacro command(name, flags, help) when is_atom(name) and is_list(flags) and is_binary(help) do
     quote location: :keep do
       command(unquote(name), unquote(flags), unquote(help), do: nil)
@@ -191,7 +202,11 @@ defmodule Artificery do
                 Map.put(current_cmd.subcommands, command_name, new_cmd)
               )
 
-            Module.put_attribute(__MODULE__, :commands, Map.put(commands, current_command, current_cmd))
+            Module.put_attribute(
+              __MODULE__,
+              :commands,
+              Map.put(commands, current_command, current_cmd)
+            )
 
             if unquote(empty_block?) do
               current_command
@@ -250,6 +265,7 @@ defmodule Artificery do
       defoption(unquote(name), unquote(type), nil, unquote(flags))
     end
   end
+
   defmacro defoption(name, type, help) when is_atom(name) and is_atom(type) do
     quote location: :keep do
       defoption(unquote(name), unquote(type), unquote(help), [])
@@ -264,15 +280,18 @@ defmodule Artificery do
       defoption :verbose, :boolean, "Turns on verbose output", hidden: true
 
   """
-  defmacro defoption(name, type, help, flags) when is_atom(name) and is_atom(type) and is_list(flags) do
+  defmacro defoption(name, type, help, flags)
+           when is_atom(name) and is_atom(type) and is_list(flags) do
     quote location: :keep do
       options = Module.get_attribute(__MODULE__, :options)
 
       option_name = unquote(name)
+
       option_flags =
         Map.new(unquote(flags))
         |> Map.put(:help, unquote(help))
         |> Map.put(:type, unquote(type))
+
       opt = Artificery.Option.new(option_name, option_flags)
       Artificery.Option.validate!(opt, caller: __MODULE__)
 
@@ -359,7 +378,11 @@ defmodule Artificery do
       case current_command do
         nil ->
           # Global
-          Module.put_attribute(__MODULE__, :global_options, Map.put(global_options, option_name, opt))
+          Module.put_attribute(
+            __MODULE__,
+            :global_options,
+            Map.put(global_options, option_name, opt)
+          )
 
         a when is_atom(a) ->
           # Top-level command
@@ -399,30 +422,38 @@ defmodule Artificery do
       option(unquote(name), unquote(type), nil, unquote(flags))
     end
   end
+
   defmacro option(name, type, help) when is_atom(name) and is_atom(type) do
     quote location: :keep do
       option(unquote(name), unquote(type), unquote(help), [])
     end
   end
-  defmacro option(name, type, help, flags) when is_atom(name) and is_atom(type) and is_list(flags) do
+
+  defmacro option(name, type, help, flags)
+           when is_atom(name) and is_atom(type) and is_list(flags) do
     quote location: :keep do
       commands = Module.get_attribute(__MODULE__, :commands)
       current_command = var!(current_command, unquote(__MODULE__))
       global_options = Module.get_attribute(__MODULE__, :global_options)
 
       option_name = unquote(name)
+
       flags =
         Map.new(unquote(flags))
         |> Map.put(:type, unquote(type))
         |> Map.put(:help, unquote(help))
+
       opt = Artificery.Option.new(option_name, flags)
       Artificery.Option.validate!(opt, caller: __MODULE__)
-
 
       case current_command do
         nil ->
           # Global option
-          Module.put_attribute(__MODULE__, :global_options, Map.put(global_options, option_name, opt))
+          Module.put_attribute(
+            __MODULE__,
+            :global_options,
+            Map.put(global_options, option_name, opt)
+          )
 
         a when is_atom(a) ->
           # Top-level command option
@@ -473,6 +504,7 @@ defmodule Artificery do
       argument(unquote(name), unquote(type), unquote(help), [])
     end
   end
+
   defmacro argument(name, type, flags) when is_atom(name) and is_atom(type) and is_list(flags) do
     quote location: :keep do
       argument(unquote(name), unquote(type), nil, unquote(flags))
@@ -488,17 +520,20 @@ defmodule Artificery do
       argument :name, :string, "The name to use", required: true
 
   """
-  defmacro argument(name, type, help, flags) when
-    is_atom(name) and is_atom(type) and (is_nil(help) or is_binary(help)) and is_list(flags) do
+  defmacro argument(name, type, help, flags)
+           when is_atom(name) and is_atom(type) and (is_nil(help) or is_binary(help)) and
+                  is_list(flags) do
     quote location: :keep do
       commands = Module.get_attribute(__MODULE__, :commands)
       current_command = var!(current_command, unquote(__MODULE__))
 
       arg_name = unquote(name)
+
       flags =
         Map.new(unquote(flags))
         |> Map.put(:type, unquote(type))
         |> Map.put(:help, unquote(help))
+
       arg = Artificery.Option.new(arg_name, flags)
       Artificery.Option.validate!(arg, caller: __MODULE__)
 

@@ -4,24 +4,24 @@ defmodule Artificery.Command do
   @behaviour Access
 
   defstruct name: nil,
-    callback: nil,
-    # Options are keyed, so use a map for easy access
-    options: %{},
-    # This is a list since they are positional, order matters
-    arguments: [],
-    # Subcommands are also keyed
-    subcommands: %{},
-    help: nil,
-    hidden: false
+            callback: nil,
+            # Options are keyed, so use a map for easy access
+            options: %{},
+            # This is a list since they are positional, order matters
+            arguments: [],
+            # Subcommands are also keyed
+            subcommands: %{},
+            help: nil,
+            hidden: false
 
   @type t :: %__MODULE__{
-    callback: atom,
-    options: %{atom => Artificery.Option.t},
-    arguments: [Artificery.Option.t],
-    subcommands: %{atom => t},
-    help: nil | String.t,
-    hidden: boolean
-  }
+          callback: atom,
+          options: %{atom => Artificery.Option.t()},
+          arguments: [Artificery.Option.t()],
+          subcommands: %{atom => t},
+          help: nil | String.t(),
+          hidden: boolean
+        }
 
   @doc """
   Creates a new Command struct, with the given flags applied.
@@ -32,9 +32,11 @@ defmodule Artificery.Command do
       case Map.get(flags, :callback) do
         nil ->
           name
+
         a when is_atom(a) ->
           a
       end
+
     %__MODULE__{
       name: name,
       help: Map.get(flags, :help),
@@ -46,7 +48,7 @@ defmodule Artificery.Command do
   @doc """
   Extends the given Command with a new option.
   """
-  @spec add_option(t, Artificery.Option.t) :: t
+  @spec add_option(t, Artificery.Option.t()) :: t
   def add_option(%__MODULE__{options: opts} = c, %Artificery.Option{name: name} = opt) do
     %{c | options: Map.put(opts, name, opt)}
   end
@@ -54,7 +56,7 @@ defmodule Artificery.Command do
   @doc """
   Extends the given Command with a new positional argument.
   """
-  @spec add_argument(t, Artificery.Option.t) :: t
+  @spec add_argument(t, Artificery.Option.t()) :: t
   def add_argument(%__MODULE__{arguments: args} = c, %Artificery.Option{} = arg) do
     %{c | arguments: args ++ [arg]}
   end
@@ -65,6 +67,7 @@ defmodule Artificery.Command do
     case Map.get(c, key) do
       nil ->
         :error
+
       val ->
         {:ok, val}
     end
@@ -75,6 +78,7 @@ defmodule Artificery.Command do
     case Map.get(c, key) do
       nil ->
         default
+
       val ->
         val
     end
@@ -85,8 +89,9 @@ defmodule Artificery.Command do
   def get_and_update(c, key, fun) do
     {get_data, kv} =
       c
-      |> Map.from_struct
+      |> Map.from_struct()
       |> Access.get_and_update(key, fun)
+
     {get_data, struct(__MODULE__, kv)}
   end
 
@@ -95,8 +100,9 @@ defmodule Artificery.Command do
   def pop(c, key) do
     {val, kv} =
       c
-      |> Map.from_struct
+      |> Map.from_struct()
       |> Map.pop(key)
+
     {val, struct(__MODULE__, kv)}
   end
 end

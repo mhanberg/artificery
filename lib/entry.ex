@@ -292,9 +292,7 @@ defmodule Artificery.Entry do
 
             other ->
               Console.error(
-                "Expected {:ok, options} returned from #{__MODULE__}.pre_dispatch/3, got: #{
-                  inspect(other)
-                }"
+                "Expected {:ok, options} returned from #{__MODULE__}.pre_dispatch/3, got: #{inspect(other)}"
               )
           end
 

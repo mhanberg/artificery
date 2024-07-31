@@ -8,7 +8,7 @@ defmodule Artificery.Console do
   @cursor_hide @esc <> "?25l"
   @cursor_show @esc <> "?25h"
   @erase_line @esc <> "2K"
-  #@erase_down @esc <> "J"
+  # @erase_down @esc <> "J"
 
   @doc """
   Terminates the process with the given status code.
@@ -17,6 +17,7 @@ defmodule Artificery.Console do
   def halt(code)
 
   def halt(0), do: :ok
+
   def halt(code) when code > 0 do
     if Application.get_env(:artificery, :no_halt, false) do
       # During tests we don't want to kill the node process,
@@ -80,6 +81,7 @@ defmodule Artificery.Console do
   @spec write(:standard_error | :stdio, iodata, [atom]) :: :ok
   def write(msg), do: write(:stdio, msg, [])
   def write(msg, styles) when is_list(styles), do: write(:stdio, msg, styles)
+
   def write(device, msg, styles) when is_list(styles) do
     IO.write(device, Artificery.Console.Color.style(msg, styles))
   end
@@ -152,14 +154,17 @@ defmodule Artificery.Console do
     quote location: :keep do
       {:ok, spinner} = Artificery.Console.Spinner.start_link(unquote(opts))
       Artificery.Console.Spinner.start(spinner)
+
       loop = fn loop, pid ->
         receive do
           {^pid, {:ok, res}} ->
             Artificery.Console.Spinner.stop(spinner)
             res
+
           {^pid, {:error, {type, err, trace}}} ->
             Artificery.Console.Spinner.stop(spinner)
             Artificery.Console.error(Exception.format(type, err, trace))
+
           {^pid, {:exception, {err, trace}}} ->
             Artificery.Console.Spinner.stop(spinner)
             msg = Exception.message(err) <> Exception.format_stacktrace(trace)
@@ -169,19 +174,23 @@ defmodule Artificery.Console do
             loop.(loop, pid)
         end
       end
+
       parent = self()
-      pid = spawn(fn ->
-        try do
-          res = unquote(block)
-          send parent, {self(), {:ok, res}}
-        rescue
-          err ->
-            send parent, {self(), {:exception, {err, __STACKTRACE__}}}
-        catch
-          type, err ->
-            send parent, {self(), {:error, {type, err, __STACKTRACE__}}}
-        end
-      end)
+
+      pid =
+        spawn(fn ->
+          try do
+            res = unquote(block)
+            send(parent, {self(), {:ok, res}})
+          rescue
+            err ->
+              send(parent, {self(), {:exception, {err, __STACKTRACE__}}})
+          catch
+            type, err ->
+              send(parent, {self(), {:error, {type, err, __STACKTRACE__}}})
+          end
+        end)
+
       loop.(loop, pid)
     end
   end
@@ -189,7 +198,7 @@ defmodule Artificery.Console do
   @doc """
   Updates a running spinner with the provided status text.
   """
-  @spec update_spinner(String.t) :: :ok
+  @spec update_spinner(String.t()) :: :ok
   def update_spinner(status) when is_binary(status) do
     Artificery.Console.Spinner.status(status)
   end
@@ -237,11 +246,14 @@ defmodule Artificery.Console do
   # Erases `n` lines starting at the current line and going up the screen.
   @doc false
   def erase_lines(0), do: ""
+
   def erase_lines(n) when is_integer(n) do
     erase_line()
-    if (n - 1) > 0 do
+
+    if n - 1 > 0 do
       cursor_up(1)
     end
+
     erase_lines(n - 1)
   end
 
@@ -260,6 +272,7 @@ defmodule Artificery.Console do
     case :os.type() do
       {:win32, _} ->
         ?!
+
       _ ->
         ?▸
     end
@@ -267,9 +280,10 @@ defmodule Artificery.Console do
 
   defp bangify(msg, c \\ arrow()) do
     lines =
-    for line <- String.split(msg, "\n", trim: true) do
-      [c, ?\s, ?\s, line]
-    end
+      for line <- String.split(msg, "\n", trim: true) do
+        [c, ?\s, ?\s, line]
+      end
+
     Enum.join(lines, "\n")
   end
 
@@ -279,7 +293,7 @@ defmodule Artificery.Console do
     # For logger state
     :ets.new(__MODULE__, [:public, :set, :named_table])
     # Start listening for console events
-    Events.start
+    Events.start()
     :ok
   end
 

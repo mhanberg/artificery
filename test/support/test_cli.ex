@@ -8,6 +8,6 @@ defmodule Artificery.Test.CLI do
   end
 
   def hello(_args, %{name: name}) do
-    Artificery.Console.notice "Hello #{name}!"
+    Artificery.Console.notice("Hello #{name}!")
   end
 end

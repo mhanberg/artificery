@@ -13,7 +13,7 @@ defmodule Artificery.MixProject do
       docs: docs(),
       description: description(),
       package: package(),
-      elixirc_paths: elixirc_paths(Mix.env),
+      elixirc_paths: elixirc_paths(Mix.env()),
       preferred_cli_env: [
         docs: :docs,
         "hex.publish": :docs,

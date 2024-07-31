@@ -46,6 +46,7 @@ defmodule Artificery.Console.Events do
     notify(subscribers, :sigwinch)
     {:ok, subscribers}
   end
+
   def handle_event(_, subscribers), do: {:ok, subscribers}
 
   @impl :gen_event
@@ -57,10 +58,12 @@ defmodule Artificery.Console.Events do
       {:ok, :ok, Map.put(subscribers, pid, ref)}
     end
   end
+
   def handle_call({:unsubscribe, pid}, subscribers) do
     case Map.get(subscribers, pid) do
       nil ->
         {:ok, :ok, subscribers}
+
       ref ->
         Process.demonitor(ref, [:flush])
         {:ok, :ok, Map.delete(subscribers, pid)}
